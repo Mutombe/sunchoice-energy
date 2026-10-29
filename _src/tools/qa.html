@@ -1,0 +1,61 @@
+<!doctype html>
+<!-- QA harness. Serve the site root, then load
+     /_src/tools/qa.html?w=390&h=844&pages=index,about
+     Each page renders in an iframe at exactly w x h and the results are written to #out as JSON. -->
+<meta charset="utf-8">
+<style>body{margin:0}iframe{border:0;display:block}</style>
+<pre id="out">pending</pre>
+<script>
+const q = new URLSearchParams(location.search);
+const W = +q.get('w') || 1280, H = +q.get('h') || 800;
+const pages = (q.get('pages') || 'index,about,services,solutions,projects,contact').split(',');
+const SMALL = 'p,li,h3,h4,figcaption,figcaption b,.eyebrow,.btn,.tag,label,dt,dd,.mono,.glass strong,.kpi span,td,th';
+
+function lines(el) {
+  const tops = new Set();
+  const rr = el.ownerDocument.createRange(); rr.selectNodeContents(el);
+  for (const b of rr.getClientRects()) if (b.width > 1 && b.height > 1) tops.add(b.bottom);
+  const fs = parseFloat(getComputedStyle(el).fontSize) * 0.6;
+  const s = [...tops].sort((a, b) => a - b);
+  return s.filter((v, i) => i === 0 || v - s[i - 1] > fs).length;
+}
+
+function audit(win, page) {
+  const d = win.document, de = d.documentElement, res = { page };
+  res.overflow = de.scrollWidth - de.clientWidth;
+  if (res.overflow > 0) {
+    res.wide = [...d.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > de.clientWidth + 1 && getComputedStyle(e).position !== 'fixed')
+      .filter(e => !e.closest('.marquee,.rail,.table-wrap')).slice(0, 6).map(e => e.tagName + '.' + [...e.classList].join('.'));
+  }
+  res.broken = [...d.images].filter(i => i.complete && i.naturalWidth === 0).map(i => i.getAttribute('src'));
+  res.stretched = [...d.images].filter(i => {
+    const cs = win.getComputedStyle(i), b = i.getBoundingClientRect();
+    if (!i.naturalWidth || b.width < 8 || b.height < 8) return false;
+    if (['cover', 'contain', 'scale-down'].includes(cs.objectFit)) return false;
+    return Math.abs((b.width / b.height) / (i.naturalWidth / i.naturalHeight) - 1) > 0.03;
+  }).map(i => i.getAttribute('src'));
+  const hero = d.querySelector('.hero, .page-hero');
+  if (hero) {
+    const hb = hero.getBoundingClientRect();
+    const kids = [...hero.querySelectorAll('*')].filter(e => e.offsetParent && e.getBoundingClientRect().height > 0 && !e.closest('[aria-hidden=true]') && e.tagName !== 'IMG');
+    const lowest = Math.max(...kids.map(e => e.getBoundingClientRect().bottom));
+    res.hero = { bottom: Math.round(hb.bottom), content: Math.round(lowest), vh: H };
+  }
+  res.text = [...d.querySelectorAll(SMALL)].filter(e => e.offsetParent && e.textContent.trim() && !e.closest('svg,.marquee,[aria-hidden=true],.menu'))
+    .map((e, i) => ({ k: i, t: e.textContent.trim().replace(/\s+/g, ' ').slice(0, 70), n: e.textContent.trim().length, l: lines(e), tag: e.tagName.toLowerCase() + (e.classList[0] ? '.' + e.classList[0] : '') }));
+  return res;
+}
+
+(async () => {
+  const out = [];
+  for (const p of pages) {
+    const f = document.createElement('iframe');
+    f.width = W; f.height = H; document.body.appendChild(f);
+    await new Promise(r => { f.onload = r; setTimeout(r, 9000); f.src = '/' + p + '.html#shot'; });
+    await new Promise(r => setTimeout(r, 1500));
+    try { out.push(audit(f.contentWindow, p)); } catch (e) { out.push({ page: p, error: String(e) }); }
+    f.remove();
+  }
+  document.getElementById('out').textContent = JSON.stringify(out);
+})();
+</script>
