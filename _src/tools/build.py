@@ -2,7 +2,7 @@
 expands <!--#include name--> partials. A page starts with a JSON meta comment:
 <!--{"title": "...", "desc": "...", "page": "home", "bodyclass": "", "ogimage": "installer-sunset"}-->
 Usage: python _src/tools/build.py"""
-import json, os, re, glob
+import hashlib, json, os, re, glob
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 P = os.path.join(ROOT, '_src', 'partials')
@@ -17,6 +17,11 @@ def include(html):
 
 
 base = open(os.path.join(P, 'base.html'), encoding='utf8').read()
+# /assets/* is served with a one-year immutable cache, so stamp the CSS and JS URLs
+# with a content hash: any edit gives a new URL and reaches visitors immediately.
+for asset in ('assets/css/style.css', 'assets/js/main.js'):
+    v = hashlib.sha1(open(os.path.join(ROOT, asset), 'rb').read()).hexdigest()[:10]
+    base = base.replace(f'"{asset}"', f'"{asset}?v={v}"')
 for f in sorted(glob.glob(os.path.join(ROOT, '_src', 'pages', '*.html'))):
     src = open(f, encoding='utf8').read()
     m = re.match(r'<!--(\{.*?\})-->\s*', src, re.S)
