@@ -105,9 +105,9 @@
     const slides = $$('.hero__slide', hero);
     const bars = $$('.mission__progress span', hero);
     const copy = [
-      { t: 'Our Mission', p: 'To give every Zimbabwean home and business reliable, affordable power from the sun, designed for how you actually live and work.', h: 'about.html' },
-      { t: 'Residential Solar', p: 'Hybrid systems with lithium storage that keep lights, fridges and borehole pumps running straight through load-shedding.', h: 'services.html#residential' },
-      { t: 'Commercial Plants', p: 'Whole-roof installations that cut operating costs for factories, warehouses and offices, engineered and installed by our own crews.', h: 'services.html#commercial' },
+      { t: 'Our Mission', p: 'Reliable, affordable solar for every Zimbabwean home and business.', h: 'about.html' },
+      { t: 'Residential Solar', p: 'Hybrid systems that keep the fridge and pump running.', h: 'services.html#residential' },
+      { t: 'Commercial Plants', p: 'Whole-roof plants that cut running costs for factories and offices.', h: 'services.html#commercial' },
     ];
     const T = $('[data-hero-title]', hero), P = $('[data-hero-text]', hero), L = $('[data-hero-link]', hero);
     const DUR = 7000;
